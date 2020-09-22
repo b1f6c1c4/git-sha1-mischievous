@@ -13,7 +13,7 @@ module metric (
    integer i;
    always_comb begin
       m = 160;
-      for (i = 159; i >= 0; i--) begin
+      for (i = 0; i < 160; i++) begin
          if (diff[i]) begin
             m = 159 - i;
          end

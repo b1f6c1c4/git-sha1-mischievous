@@ -13,7 +13,7 @@ module tile (
 );
    localparam MSG = 512 * `BLOCKS;
    localparam RNGS = 16 * `BLOCKS;
-   localparam DH = 241 * `BLOCKS + 1; // TODO
+   localparam DH = 241 * `BLOCKS + 2;
 
    logic [$clog2(RNGS+1)-1:0] load_rng;
    logic [MSG-1:0] random;

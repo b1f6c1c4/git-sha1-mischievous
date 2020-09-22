@@ -9,7 +9,7 @@ int main(int argc, char **argv) {
     Verilated::commandArgs(argc, argv);
     Vsystem obj;
     obj.seed_i = 0x114514;
-    obj.msg_i[15] = 0x80000000; obj.mask_i[15] = 0x00000000;
+    obj.msg_i[15] = 0x00000000; obj.mask_i[15] = 0xf0000000;
     obj.msg_i[14] = 0x00000000; obj.mask_i[14] = 0x00000000;
     obj.msg_i[13] = 0x00000000; obj.mask_i[13] = 0x00000000;
     obj.msg_i[12] = 0x00000000; obj.mask_i[12] = 0x00000000;
@@ -30,14 +30,24 @@ int main(int argc, char **argv) {
     obj.dgst_i[2] = 0x3255bfef;
     obj.dgst_i[1] = 0x95601890;
     obj.dgst_i[0] = 0xafd80709;
+    obj.reset_ni = 0;
+    obj.clk_i = 1;
+    obj.eval();
+    obj.clk_i = 0;
+    obj.eval();
+    obj.clk_i = 1;
+    obj.eval();
+    obj.clk_i = 0;
+    obj.reset_ni = 1;
+    obj.eval();
     for (size_t t{ 0 }; t < 4096; t++) {
        obj.clk_i = 1;
        obj.eval();
        obj.clk_i = 0;
        obj.eval();
-       std::cout << obj.progress_o;
-       // for (size_t i{ 0 }; i < 5; i++)
-       //    std::cout << std::setfill('0') << std::setw(8) << std::right <<std::hex << obj.dgst_o[i];
+       std::cout << std::dec << obj.progress_o << " ";
+       for (size_t i{ 0 }; i < 16; i++)
+          std::cout << std::setfill('0') << std::setw(8) << std::right << std::hex << obj.msg_o[15 - i];
        std::cout << std::endl;
     }
 }

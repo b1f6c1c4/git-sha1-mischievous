@@ -14,7 +14,7 @@ module system #(
 );
    localparam MSG = 512 * `BLOCKS;
    localparam SKIP = 114;
-   localparam DH = 241 * `BLOCKS + 1; // TODO
+   localparam DH = 241 * `BLOCKS + 2;
 
    logic [$clog2(2+SKIP+DH):0] state;
    logic [$clog2(160+1):0] progress_next;
