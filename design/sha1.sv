@@ -93,6 +93,7 @@ interface sha1_word_boundry;
 endinterface
 
 module sha1_block (
+   input clk_i,
    input logic [511:0] block_i,
    sha1_block_boundry.slave prev_intf,
    sha1_block_boundry.master next_intf
@@ -126,23 +127,27 @@ module sha1_block (
    generate
    for (genvar t = 0; t < 80; t++) begin : g_t
       sha1_node #(.T (t)) i_node (
+         .clk_i,
          .prev_intf (words[t]),
          .next_intf (words[t+1])
       );
    end
    endgenerate
 
-   assign next_intf.H0 = prev_intf.H0 + words[80].A;
-   assign next_intf.H1 = prev_intf.H1 + words[80].B;
-   assign next_intf.H2 = prev_intf.H2 + words[80].C;
-   assign next_intf.H3 = prev_intf.H3 + words[80].D;
-   assign next_intf.H4 = prev_intf.H4 + words[80].E;
+   always_ff @(posedge clk_i) begin
+      next_intf.H0 <= prev_intf.H0 + words[80].A;
+      next_intf.H1 <= prev_intf.H1 + words[80].B;
+      next_intf.H2 <= prev_intf.H2 + words[80].C;
+      next_intf.H3 <= prev_intf.H3 + words[80].D;
+      next_intf.H4 <= prev_intf.H4 + words[80].E;
+   end
 
 endmodule
 
 module sha1_node #(
    parameter T = 0
 ) (
+   input clk_i,
    sha1_word_boundry.slave prev_intf,
    sha1_word_boundry.master next_intf
 );
@@ -173,14 +178,6 @@ module sha1_node #(
       P += K;
    end
 
-   always_comb begin
-      next_intf.A = P;
-      next_intf.B = prev_intf.A;
-      next_intf.C = {prev_intf.B[1:0],prev_intf.B[31:2]};
-      next_intf.D = prev_intf.C;
-      next_intf.E = prev_intf.D;
-   end
-
    logic [31:0] X;
    always_comb begin
       X = prev_intf.Ws14;
@@ -189,23 +186,29 @@ module sha1_node #(
       X ^= prev_intf.Ws01;
    end
 
-   always_comb begin
-      next_intf.Ws00 = (T < 15) ? prev_intf.Ws01 : {X[30:0],X[31]};
-      next_intf.Ws01 = prev_intf.Ws02;
-      next_intf.Ws02 = prev_intf.Ws03;
-      next_intf.Ws03 = prev_intf.Ws04;
-      next_intf.Ws04 = prev_intf.Ws05;
-      next_intf.Ws05 = prev_intf.Ws06;
-      next_intf.Ws06 = prev_intf.Ws07;
-      next_intf.Ws07 = prev_intf.Ws08;
-      next_intf.Ws08 = prev_intf.Ws09;
-      next_intf.Ws09 = prev_intf.Ws10;
-      next_intf.Ws10 = prev_intf.Ws11;
-      next_intf.Ws11 = prev_intf.Ws12;
-      next_intf.Ws12 = prev_intf.Ws13;
-      next_intf.Ws13 = prev_intf.Ws14;
-      next_intf.Ws14 = prev_intf.Ws15;
-      next_intf.Ws15 = prev_intf.Ws00;
+   always_ff @(posedge clk_i) begin
+      next_intf.A <= P;
+      next_intf.B <= prev_intf.A;
+      next_intf.C <= {prev_intf.B[1:0],prev_intf.B[31:2]};
+      next_intf.D <= prev_intf.C;
+      next_intf.E <= prev_intf.D;
+
+      next_intf.Ws00 <= (T < 15) ? prev_intf.Ws01 : {X[30:0],X[31]};
+      next_intf.Ws01 <= prev_intf.Ws02;
+      next_intf.Ws02 <= prev_intf.Ws03;
+      next_intf.Ws03 <= prev_intf.Ws04;
+      next_intf.Ws04 <= prev_intf.Ws05;
+      next_intf.Ws05 <= prev_intf.Ws06;
+      next_intf.Ws06 <= prev_intf.Ws07;
+      next_intf.Ws07 <= prev_intf.Ws08;
+      next_intf.Ws08 <= prev_intf.Ws09;
+      next_intf.Ws09 <= prev_intf.Ws10;
+      next_intf.Ws10 <= prev_intf.Ws11;
+      next_intf.Ws11 <= prev_intf.Ws12;
+      next_intf.Ws12 <= prev_intf.Ws13;
+      next_intf.Ws13 <= prev_intf.Ws14;
+      next_intf.Ws14 <= prev_intf.Ws15;
+      next_intf.Ws15 <= prev_intf.Ws00;
    end
 
 endmodule
