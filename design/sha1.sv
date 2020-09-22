@@ -92,33 +92,64 @@ interface sha1_word_boundry;
    );
 endinterface
 
-module sha1_block (
+module sha1_block #(
+   parameter ID = "inv"
+) (
    input clk_i,
    input logic [511:0] block_i,
    sha1_block_boundry.slave prev_intf,
    sha1_block_boundry.master next_intf
 );
-
-   // TODO: pipeline blocks data
+   localparam D = (3 * 80 + 1) * ID;
+   localparam H = 3 * 80 - 1;
 
    sha1_word_boundry words[0:80]();
 
-   assign words[0].Ws00 = block_i[511:480];
-   assign words[0].Ws01 = block_i[479:448];
-   assign words[0].Ws02 = block_i[447:416];
-   assign words[0].Ws03 = block_i[415:384];
-   assign words[0].Ws04 = block_i[383:352];
-   assign words[0].Ws05 = block_i[351:320];
-   assign words[0].Ws06 = block_i[319:288];
-   assign words[0].Ws07 = block_i[287:256];
-   assign words[0].Ws08 = block_i[255:224];
-   assign words[0].Ws09 = block_i[223:192];
-   assign words[0].Ws10 = block_i[191:160];
-   assign words[0].Ws11 = block_i[159:128];
-   assign words[0].Ws12 = block_i[127:96];
-   assign words[0].Ws13 = block_i[95:64];
-   assign words[0].Ws14 = block_i[63:32];
-   assign words[0].Ws15 = block_i[31:0];
+   logic [511:0] b_ppl[0:D];
+   sha1_block_boundry h_ppl[0:H]();
+
+   always @(posedge clk_i) begin
+      b_ppl[0] <= block_i;
+      h_ppl[0].H0 <= prev_intf.H0;
+      h_ppl[0].H1 <= prev_intf.H1;
+      h_ppl[0].H2 <= prev_intf.H2;
+      h_ppl[0].H3 <= prev_intf.H3;
+      h_ppl[0].H4 <= prev_intf.H4;
+   end
+
+   generate
+   for (genvar i = 0; i < D; i++) begin : g_b
+      always @(posedge clk_i) begin
+         b_ppl[i+1] <= b_ppl[i];
+      end
+   end
+   for (genvar i = 0; i < H; i++) begin : g_h
+      always @(posedge clk_i) begin
+         h_ppl[i+1].H0 <= h_ppl[i].H0;
+         h_ppl[i+1].H1 <= h_ppl[i].H1;
+         h_ppl[i+1].H2 <= h_ppl[i].H2;
+         h_ppl[i+1].H3 <= h_ppl[i].H3;
+         h_ppl[i+1].H4 <= h_ppl[i].H4;
+      end
+   end
+   endgenerate
+
+   assign words[0].Ws00 = b_ppl[D][511:480];
+   assign words[0].Ws01 = b_ppl[D][479:448];
+   assign words[0].Ws02 = b_ppl[D][447:416];
+   assign words[0].Ws03 = b_ppl[D][415:384];
+   assign words[0].Ws04 = b_ppl[D][383:352];
+   assign words[0].Ws05 = b_ppl[D][351:320];
+   assign words[0].Ws06 = b_ppl[D][319:288];
+   assign words[0].Ws07 = b_ppl[D][287:256];
+   assign words[0].Ws08 = b_ppl[D][255:224];
+   assign words[0].Ws09 = b_ppl[D][223:192];
+   assign words[0].Ws10 = b_ppl[D][191:160];
+   assign words[0].Ws11 = b_ppl[D][159:128];
+   assign words[0].Ws12 = b_ppl[D][127:96];
+   assign words[0].Ws13 = b_ppl[D][95:64];
+   assign words[0].Ws14 = b_ppl[D][63:32];
+   assign words[0].Ws15 = b_ppl[D][31:0];
 
    assign words[0].A = prev_intf.H0;
    assign words[0].B = prev_intf.H1;
@@ -137,17 +168,17 @@ module sha1_block (
    endgenerate
 
    always_ff @(posedge clk_i) begin
-      next_intf.H0 <= prev_intf.H0 + words[80].A;
-      next_intf.H1 <= prev_intf.H1 + words[80].B;
-      next_intf.H2 <= prev_intf.H2 + words[80].C;
-      next_intf.H3 <= prev_intf.H3 + words[80].D;
-      next_intf.H4 <= prev_intf.H4 + words[80].E;
+      next_intf.H0 <= h_ppl[H].H0 + words[80].A;
+      next_intf.H1 <= h_ppl[H].H1 + words[80].B;
+      next_intf.H2 <= h_ppl[H].H2 + words[80].C;
+      next_intf.H3 <= h_ppl[H].H3 + words[80].D;
+      next_intf.H4 <= h_ppl[H].H4 + words[80].E;
    end
 
 endmodule
 
 module sha1_node #(
-   parameter T = 0
+   parameter T = "inv"
 ) (
    input clk_i,
    sha1_word_boundry.slave prev_intf,
