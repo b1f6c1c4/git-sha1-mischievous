@@ -57,7 +57,7 @@
 // Verilog first import
 //
 
-`timescale 10ns/1ns
+/* verilator lint_off BLKSEQ */
 
 module rng(clk,reset,loadseed_i,seed_i,number_o);
 input clk;
