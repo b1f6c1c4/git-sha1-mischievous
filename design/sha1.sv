@@ -99,6 +99,8 @@ module sha1_block (
    sha1_block_boundry.master next_intf
 );
 
+   // TODO: pipeline blocks data
+
    sha1_word_boundry words[0:80]();
 
    assign words[0].Ws00 = block_i[511:480];
@@ -152,63 +154,102 @@ module sha1_node #(
    sha1_word_boundry.master next_intf
 );
 
-   logic [31:0] f, K;
-   always_comb begin
-      if (T < 20) begin
-         f = (prev_intf.B & prev_intf.C) | (~prev_intf.B & prev_intf.D);
-         K = 32'h5a827999;
-      end else if (T < 40) begin
-         f = prev_intf.B ^ prev_intf.C ^ prev_intf.D;
-         K = 32'h6ed9eba1;
-      end else if (T < 60) begin
-         f = (prev_intf.B & prev_intf.C) | (prev_intf.B & prev_intf.D) | (prev_intf.C & prev_intf.D);
-         K = 32'h8f1bbcdc;
-      end else begin
-         f = prev_intf.B ^ prev_intf.C ^ prev_intf.D;
-         K = 32'hca62c1d6;
-      end
-   end
+   sha1_word_boundry m1_intf();
+   sha1_word_boundry m2_intf();
 
-   logic [31:0] P;
-   always_comb begin
-      P = {prev_intf.A[26:0],prev_intf.A[31:27]};
-      P += f;
-      P += prev_intf.Ws00;
-      P += prev_intf.E;
-      P += K;
-   end
-
-   logic [31:0] X;
-   always_comb begin
-      X = prev_intf.Ws14;
-      X ^= prev_intf.Ws09;
-      X ^= prev_intf.Ws03;
-      X ^= prev_intf.Ws01;
-   end
-
+   // prev -> m1
+   logic [31:0] f, K, tmpWE;
    always_ff @(posedge clk_i) begin
-      next_intf.A <= P;
-      next_intf.B <= prev_intf.A;
-      next_intf.C <= {prev_intf.B[1:0],prev_intf.B[31:2]};
-      next_intf.D <= prev_intf.C;
-      next_intf.E <= prev_intf.D;
+      if (T < 20) begin
+         f <= (prev_intf.B & prev_intf.C) | (~prev_intf.B & prev_intf.D);
+         K <= 32'h5a827999;
+      end else if (T < 40) begin
+         f <= prev_intf.B ^ prev_intf.C ^ prev_intf.D;
+         K <= 32'h6ed9eba1;
+      end else if (T < 60) begin
+         f <= (prev_intf.B & prev_intf.C) | (prev_intf.B & prev_intf.D) | (prev_intf.C & prev_intf.D);
+         K <= 32'h8f1bbcdc;
+      end else begin
+         f <= prev_intf.B ^ prev_intf.C ^ prev_intf.D;
+         K <= 32'hca62c1d6;
+      end
+      tmpWE <= prev_intf.Ws00 + prev_intf.E;
+      m1_intf.A <= prev_intf.A;
+      m1_intf.B <= prev_intf.B;
+      m1_intf.C <= prev_intf.C;
+      m1_intf.D <= prev_intf.D;
+      m1_intf.E <= prev_intf.E;
+      m1_intf.Ws00 <= prev_intf.Ws00;
+      m1_intf.Ws01 <= prev_intf.Ws01;
+      m1_intf.Ws02 <= prev_intf.Ws02;
+      m1_intf.Ws03 <= prev_intf.Ws03;
+      m1_intf.Ws04 <= prev_intf.Ws04;
+      m1_intf.Ws05 <= prev_intf.Ws05;
+      m1_intf.Ws06 <= prev_intf.Ws06;
+      m1_intf.Ws07 <= prev_intf.Ws07;
+      m1_intf.Ws08 <= prev_intf.Ws08;
+      m1_intf.Ws09 <= prev_intf.Ws09;
+      m1_intf.Ws10 <= prev_intf.Ws10;
+      m1_intf.Ws11 <= prev_intf.Ws11;
+      m1_intf.Ws12 <= prev_intf.Ws12;
+      m1_intf.Ws13 <= prev_intf.Ws13;
+      m1_intf.Ws14 <= prev_intf.Ws14;
+      m1_intf.Ws15 <= prev_intf.Ws15;
+   end
 
-      next_intf.Ws00 <= (T < 15) ? prev_intf.Ws01 : {X[30:0],X[31]};
-      next_intf.Ws01 <= prev_intf.Ws02;
-      next_intf.Ws02 <= prev_intf.Ws03;
-      next_intf.Ws03 <= prev_intf.Ws04;
-      next_intf.Ws04 <= prev_intf.Ws05;
-      next_intf.Ws05 <= prev_intf.Ws06;
-      next_intf.Ws06 <= prev_intf.Ws07;
-      next_intf.Ws07 <= prev_intf.Ws08;
-      next_intf.Ws08 <= prev_intf.Ws09;
-      next_intf.Ws09 <= prev_intf.Ws10;
-      next_intf.Ws10 <= prev_intf.Ws11;
-      next_intf.Ws11 <= prev_intf.Ws12;
-      next_intf.Ws12 <= prev_intf.Ws13;
-      next_intf.Ws13 <= prev_intf.Ws14;
-      next_intf.Ws14 <= prev_intf.Ws15;
-      next_intf.Ws15 <= prev_intf.Ws00;
+   // m1 -> m2
+   logic [31:0] tmpfK, tmpAWE, tmpX;
+   always_ff @(posedge clk_i) begin
+      tmpfK <= f + K;
+      tmpAWE <= {m1_intf.A[26:0],m1_intf.A[31:27]} + tmpWE;
+      tmpX <= m1_intf.Ws14 ^ m1_intf.Ws09 ^ m1_intf.Ws03 ^ m1_intf.Ws01;
+      m2_intf.A <= m1_intf.A;
+      m2_intf.B <= m1_intf.B;
+      m2_intf.C <= m1_intf.C;
+      m2_intf.D <= m1_intf.D;
+      m2_intf.E <= m1_intf.E;
+      m2_intf.Ws00 <= m1_intf.Ws00;
+      m2_intf.Ws01 <= m1_intf.Ws01;
+      m2_intf.Ws02 <= m1_intf.Ws02;
+      m2_intf.Ws03 <= m1_intf.Ws03;
+      m2_intf.Ws04 <= m1_intf.Ws04;
+      m2_intf.Ws05 <= m1_intf.Ws05;
+      m2_intf.Ws06 <= m1_intf.Ws06;
+      m2_intf.Ws07 <= m1_intf.Ws07;
+      m2_intf.Ws08 <= m1_intf.Ws08;
+      m2_intf.Ws09 <= m1_intf.Ws09;
+      m2_intf.Ws10 <= m1_intf.Ws10;
+      m2_intf.Ws11 <= m1_intf.Ws11;
+      m2_intf.Ws12 <= m1_intf.Ws12;
+      m2_intf.Ws13 <= m1_intf.Ws13;
+      m2_intf.Ws14 <= m1_intf.Ws14;
+      m2_intf.Ws15 <= m1_intf.Ws15;
+   end
+
+   // m2 -> next
+   always_ff @(posedge clk_i) begin
+      next_intf.A <= tmpfK + tmpAWE;
+      next_intf.B <= m2_intf.A;
+      next_intf.C <= {m2_intf.B[1:0],m2_intf.B[31:2]};
+      next_intf.D <= m2_intf.C;
+      next_intf.E <= m2_intf.D;
+
+      next_intf.Ws00 <= (T < 15) ? m2_intf.Ws01 : {tmpX[30:0],tmpX[31]};
+      next_intf.Ws01 <= m2_intf.Ws02;
+      next_intf.Ws02 <= m2_intf.Ws03;
+      next_intf.Ws03 <= m2_intf.Ws04;
+      next_intf.Ws04 <= m2_intf.Ws05;
+      next_intf.Ws05 <= m2_intf.Ws06;
+      next_intf.Ws06 <= m2_intf.Ws07;
+      next_intf.Ws07 <= m2_intf.Ws08;
+      next_intf.Ws08 <= m2_intf.Ws09;
+      next_intf.Ws09 <= m2_intf.Ws10;
+      next_intf.Ws10 <= m2_intf.Ws11;
+      next_intf.Ws11 <= m2_intf.Ws12;
+      next_intf.Ws12 <= m2_intf.Ws13;
+      next_intf.Ws13 <= m2_intf.Ws14;
+      next_intf.Ws14 <= m2_intf.Ws15;
+      next_intf.Ws15 <= m2_intf.Ws00;
    end
 
 endmodule

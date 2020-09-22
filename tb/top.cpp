@@ -7,11 +7,7 @@
 
 int main(int argc, char **argv) {
     Verilated::commandArgs(argc, argv);
-    Verilated::traceEverOn(true);
-    VerilatedVcdC tfp;
     Vtop obj;
-    obj.trace(&tfp, 114514);
-    tfp.open("build/dump.vcd");
     obj.clk_i = 1;
     obj.eval();
     obj.clk_i = 0;
@@ -32,7 +28,7 @@ int main(int argc, char **argv) {
     obj.block_i[0][14] = 0x80000000;
     obj.block_i[0][15] = 0x6675636b;
     obj.eval();
-    for (size_t t{ 0 }; t < 128; t++) {
+    for (size_t t{ 0 }; t < 256; t++) {
        obj.clk_i = 1;
        obj.eval();
        obj.clk_i = 0;
